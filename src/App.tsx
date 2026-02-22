@@ -217,18 +217,6 @@ export default function App() {
 
   const handleUnequip = async () => {
     if (!selectedGhostForEquip) return;
-    try {
-      const res = await fetch('/api/unequip', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          ghostId: selectedGhostForEquip.ghostId, 
-          slot: selectedGhostForEquip.slot 
-        })
-      });
-      const data = await res.json();
-  const handleUnequip = async () => {
-    if (!selectedGhostForEquip) return;
     setMessage("Unequipping disabled - requires backend implementation");
   };
 
