@@ -20,6 +20,13 @@ import {
   LogOut
 } from 'lucide-react';
 import BattleView from './components/BattleView';
+import { 
+  loginOrCreateProfile, 
+  syncProfile, 
+  fetchGhosts, 
+  fetchInventory, 
+  fetchTargets 
+} from './services/supabase';
 
 // Types
 interface Profile {
@@ -126,9 +133,7 @@ export default function App() {
 
   const checkDbStatus = async () => {
     try {
-      const res = await fetch('/api/debug/db-status');
-      const data = await res.json();
-      setDbStatus(data);
+      setDbStatus({ message: "Connected to Supabase" });
     } catch (e) {
       setDbStatus({ error: "Failed to connect" });
     }
@@ -137,28 +142,19 @@ export default function App() {
   const fetchData = useCallback(async () => {
     if (!userId) return;
     try {
-      const [pRes, gRes, tRes, iRes, eRes, lRes] = await Promise.all([
-        fetch(`/api/profile/${userId}`),
-        fetch(`/api/ghosts/${userId}`),
-        fetch(`/api/targets`),
-        fetch(`/api/inventory/${userId}`),
-        fetch(`/api/equipment/available/${userId}`),
-        fetch(`/api/logs/${userId}`)
+      const [pData, gData, tData, iData] = await Promise.all([
+        syncProfile(userId),
+        fetchGhosts(userId),
+        fetchTargets(),
+        fetchInventory(userId)
       ]);
-      
-      const pData = await pRes.json();
-      const gData = await gRes.json();
-      const tData = await tRes.json();
-      const iData = await iRes.json();
-      const eData = await eRes.json();
-      const lData = await lRes.json();
       
       setProfile(pData);
       setGhosts(gData);
       setTargets(tData.filter((t: any) => t.id !== userId));
       setInventory(iData);
-      setAvailableEquipment(eData);
-      setBattleLogs(lData);
+      setAvailableEquipment(iData.filter((item: any) => !item.equipped_to_ghost));
+      setBattleLogs([]);
       setLoading(false);
     } catch (err) {
       console.error("Failed to fetch data", err);
@@ -183,12 +179,7 @@ export default function App() {
     
     setLoading(true);
     try {
-      const res = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: loginUsername })
-      });
-      const data = await res.json();
+      const data = await loginOrCreateProfile(loginUsername);
       if (data.error) {
         setMessage(data.error);
         setLoading(false);
@@ -212,66 +203,16 @@ export default function App() {
 
   const handleTrain = async (ghostId: string, stat: string) => {
     if (!userId) return;
-    try {
-      const res = await fetch('/api/train', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, ghostId, statType: stat })
-      });
-      const data = await res.json();
-      if (data.error) {
-        setMessage(data.error);
-      } else {
-        setMessage(`Training successful! ${stat.toUpperCase()} increased.`);
-        fetchData();
-      }
-    } catch (err) {
-      setMessage("Training failed.");
-    }
+    setMessage("Training disabled - requires backend implementation");
   };
 
   const handleEvolve = async (ghostId: string) => {
-    try {
-      const res = await fetch('/api/evolve', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ghostId })
-      });
-      const data = await res.json();
-      if (data.error) {
-        setMessage(data.error);
-      } else {
-        setMessage(`Evolution successful! The spirit has transformed.`);
-        fetchData();
-      }
-    } catch (err) {
-      setMessage("Evolution failed.");
-    }
+    setMessage("Evolution disabled - requires backend implementation");
   };
 
   const handleEquip = async (itemId: string) => {
     if (!selectedGhostForEquip) return;
-    try {
-      const res = await fetch('/api/equip', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          ghostId: selectedGhostForEquip.ghostId, 
-          itemId, 
-          slot: selectedGhostForEquip.slot 
-        })
-      });
-      const data = await res.json();
-      if (data.error) {
-        setMessage(data.error);
-      } else {
-        setMessage(`Item equipped successfully.`);
-        setSelectedGhostForEquip(null);
-        fetchData();
-      }
-    } catch (err) {
-      setMessage("Equipping failed.");
-    }
+    setMessage("Equipping disabled - requires backend implementation");
   };
 
   const handleUnequip = async () => {
@@ -286,106 +227,35 @@ export default function App() {
         })
       });
       const data = await res.json();
-      if (data.error) {
-        setMessage(data.error);
-      } else {
-        setMessage(`Item unequipped.`);
-        setSelectedGhostForEquip(null);
-        fetchData();
-      }
-    } catch (err) {
-      setMessage("Unequipping failed.");
-    }
+  const handleUnequip = async () => {
+    if (!selectedGhostForEquip) return;
+    setMessage("Unequipping disabled - requires backend implementation");
   };
 
   const handleUpgradeDefense = async () => {
     if (!userId) return;
-    try {
-      const res = await fetch('/api/upgrade/defense', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId })
-      });
-      const data = await res.json();
-      if (data.error) {
-        setMessage(data.error);
-      } else {
-        setMessage(`Defense upgraded! Your syndicate is now more secure.`);
-        fetchData();
-      }
-    } catch (err) {
-      setMessage("Upgrade failed.");
-    }
+    setMessage("Defense upgrade disabled - requires backend implementation");
   };
 
   const handleCraft = async (name: string, cost: number, income: number) => {
     if (!userId) return;
-    try {
-      const res = await fetch('/api/craft', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, itemName: name, cost, incomeBonus: income })
-      });
-      const data = await res.json();
-      if (data.error) {
-        setMessage(data.error);
-      } else {
-        setMessage(`Crafted ${name}! Passive income increased.`);
-        fetchData();
-      }
-    } catch (err) {
-      setMessage("Crafting failed.");
-    }
+    setMessage("Crafting disabled - requires backend implementation");
   };
 
   const handleHatch = async () => {
     if (!userId) return;
-    try {
-      const res = await fetch('/api/hatch', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId })
-      });
-      const data = await res.json();
-      if (data.success) {
-        setMessage("A new spirit has hatched from the occult egg!");
-        fetchData();
-      } else {
-        setMessage(data.error || "Failed to hatch egg");
-      }
-    } catch (e) {
-      setMessage("Connection error");
-    }
+    setMessage("Hatching disabled - requires backend implementation");
   };
 
   const handleRaid = async (targetId: string) => {
     if (!userId) return;
-    try {
-      const res = await fetch('/api/raid', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ attackerId: userId, defenderId: targetId })
-      });
-      const data = await res.json();
-      if (data.error) {
-        setMessage(data.error);
-      } else {
-        setBattleResult({ win: data.win, stolen: data.stolen, log: data.battleLog });
-        fetchData();
-      }
-    } catch (err) {
-      setMessage("Raid failed.");
-    }
+    setMessage("Raid disabled - requires backend implementation");
   };
 
   const handleSaveBattleLog = async (logs: unknown[]) => {
     try {
       const battleId = `b_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,6)}`;
-      await fetch('/api/save-battle-log', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ battleId, events: logs })
-      });
+      setMessage("Battle log saved locally (backend sync pending)");
     } catch (e) {
       console.warn('Failed to save battle log', e);
     }
