@@ -23,16 +23,13 @@ async function syncProfile(userId: string) {
     .eq('id', userId)
     .single();
   if (!profile) return null;
-
   const now = Date.now();
   const secondsPassed = (now - (profile.last_income_claim || 0)) / 1000;
   const earnedGold = Math.floor((profile.income_per_sec || 0) * secondsPassed);
-
   const enSecondsPassed = (now - (profile.last_energy_update || 0)) / 1000;
   const recoveredEnergy = Math.floor(enSecondsPassed / 5);
   const newEnergy = Math.min(profile.max_energy || 100, (profile.energy || 0) + recoveredEnergy);
   const updatedLastEnergy = (profile.last_energy_update || 0) + (recoveredEnergy * 5 * 1000);
-
   await supabase
     .from('profiles')
     .update({
@@ -42,7 +39,6 @@ async function syncProfile(userId: string) {
       last_energy_update: recoveredEnergy > 0 ? updatedLastEnergy : (profile.last_energy_update || 0)
     })
     .eq('id', userId);
-
   const { data: updatedProfile } = await supabase
     .from('profiles')
     .select('*')
@@ -51,20 +47,16 @@ async function syncProfile(userId: string) {
   return updatedProfile;
 }
 
-function sendJson(res: any, status: number, body: any) { res.statusCode = status; res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(body)); }
+function sendJson(res: any, status: number, body: any) { 
+  res.statusCode = status; 
+  res.setHeader('Content-Type', 'application/json'); 
+  res.end(JSON.stringify(body)); 
+}
 
 export default async function handler(req: any, res: any) {
   try {
-    // Parse pathname from request
-    const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
-    let pathname = url.pathname;
+    const pathname = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`).pathname;
     
-    // Vercel strips /api/ prefix in some cases, so handle both
-    if (!pathname.startsWith('/api')) {
-      pathname = `/api${pathname}`;
-    }
-
-    // GET /api/debug/db-status
     if (pathname === '/api/debug/db-status' && req.method === 'GET') {
       const { count: pCount, error: pError } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
       const { count: gCount, error: gError } = await supabase.from('player_ghosts').select('*', { count: 'exact', head: true });
@@ -77,12 +69,10 @@ export default async function handler(req: any, res: any) {
       });
     }
 
-    // POST /api/login
     if (pathname === '/api/login' && req.method === 'POST') {
       const body = await parseJsonBody(req);
       const username = body.username;
       if (!username || username.length < 3) return sendJson(res, 400, { error: 'Username must be at least 3 characters' });
-
       let { data: profile } = await supabase.from('profiles').select('*').eq('username', username).single();
       if (!profile) {
         const userId = Math.random().toString(36).substring(7);
@@ -111,7 +101,6 @@ export default async function handler(req: any, res: any) {
       return sendJson(res, 200, profile);
     }
 
-    // GET /api/profile/:id
     if (pathname.startsWith('/api/profile/') && req.method === 'GET') {
       const userId = pathname.split('/').pop();
       const profile = await syncProfile(userId);
@@ -132,27 +121,23 @@ export default async function handler(req: any, res: any) {
       return sendJson(res, 200, profile);
     }
 
-    // GET /api/ghosts/:userId
     if (pathname.startsWith('/api/ghosts/') && req.method === 'GET') {
       const userId = pathname.split('/').pop();
       const { data: ghosts } = await supabase.from('player_ghosts').select('*').eq('owner_id', userId);
       return sendJson(res, 200, ghosts || []);
     }
 
-    // GET /api/inventory/:userId
     if (pathname.startsWith('/api/inventory/') && req.method === 'GET') {
       const userId = pathname.split('/').pop();
       const { data: items } = await supabase.from('inventory').select('*').eq('owner_id', userId);
       return sendJson(res, 200, items || []);
     }
 
-    // GET /api/targets
     if (pathname === '/api/targets' && req.method === 'GET') {
       const { data: targets } = await supabase.from('profiles').select('id, username, gold, income_per_sec, defense_layer').limit(10);
       return sendJson(res, 200, targets || []);
     }
 
-    // POST /api/save-battle-log
     if (pathname === '/api/save-battle-log' && req.method === 'POST') {
       const body = await parseJsonBody(req);
       const { battleId, events } = body;
@@ -162,7 +147,6 @@ export default async function handler(req: any, res: any) {
       return sendJson(res, 200, { success: true, inserted: rows.length });
     }
 
-    // Not found
     return sendJson(res, 404, { error: 'Not Found', path: pathname });
   } catch (err: any) {
     console.error('api handler error', err);
