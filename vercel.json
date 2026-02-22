@@ -6,7 +6,12 @@
     "SUPABASE_URL": "@supabase_url",
     "SUPABASE_ANON_KEY": "@supabase_anon_key"
   },
+  "functions": {
+    "api/index.ts": {
+      "runtime": "nodejs18.x"
+    }
+  },
   "rewrites": [
-    { "source": "/api/:path*", "destination": "/server.ts" }
+    { "source": "/api/:path*", "destination": "/api" }
   ]
 }
