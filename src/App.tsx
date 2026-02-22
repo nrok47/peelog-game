@@ -19,6 +19,7 @@ import {
   Heart,
   LogOut
 } from 'lucide-react';
+import BattleView from './components/BattleView';
 
 // Types
 interface Profile {
@@ -377,6 +378,19 @@ export default function App() {
     }
   };
 
+  const handleSaveBattleLog = async (logs: unknown[]) => {
+    try {
+      const battleId = `b_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,6)}`;
+      await fetch('/api/save-battle-log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ battleId, events: logs })
+      });
+    } catch (e) {
+      console.warn('Failed to save battle log', e);
+    }
+  };
+
   if (loading) return (
     <div className="h-screen w-full flex items-center justify-center bg-[#0c0c0c] text-orange-500 font-mono">
       <motion.div 
@@ -616,6 +630,9 @@ export default function App() {
                         </div>
                       </div>
                     </div>
+                  </div>
+                  <div className="glass rounded-2xl p-6 border-white/5 md:col-span-2">
+                    <BattleView onSaveLog={handleSaveBattleLog} />
                   </div>
                 </section>
               </div>

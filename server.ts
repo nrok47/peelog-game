@@ -634,6 +634,33 @@ async function startServer() {
     res.json({ win, stolen, energy: attacker.energy - 20, battleLog: battleTurns.join(" "), turns: battleTurns });
   });
 
+  // Save detailed battle event logs (from client simulator)
+  app.post('/api/save-battle-log', async (req, res) => {
+    try {
+      const { battleId, events } = req.body;
+      if (!battleId || !Array.isArray(events)) return res.status(400).json({ error: 'battleId and events required' });
+
+      const rows = events.map((e: any) => ({
+        battle_id: battleId,
+        turn: e.turn ?? 0,
+        timestamp: e.timestamp ? new Date(e.timestamp) : new Date(),
+        actor_id: e.actorId,
+        action: e.action,
+        target_id: e.targetId,
+        detail: e.detail ? (typeof e.detail === 'string' ? e.detail : JSON.stringify(e.detail)) : null,
+        value: e.value ?? null,
+        hp_before: e.hpBefore ?? null,
+        hp_after: e.hpAfter ?? null
+      }));
+
+      await supabase.from('battle_logs').insert(rows as any);
+      res.json({ success: true, inserted: rows.length });
+    } catch (err: any) {
+      console.error('save-battle-log error', err.message || err);
+      res.status(500).json({ error: err.message || 'failed' });
+    }
+  });
+
   app.get("/api/logs/:userId", async (req, res) => {
     const { data: logs } = await supabase
       .from('battle_logs')
